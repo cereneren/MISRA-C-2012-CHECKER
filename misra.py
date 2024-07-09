@@ -1,4 +1,5 @@
 import ply.lex as lex
+import ast
 
 # List of token names
 tokens = (
@@ -102,22 +103,53 @@ def t_error(t):
 # Build the lexer
 lexer = lex.lex()
 
-# Test the lexer
-input_code = """
-#include <stdio.h>
+# TypeChecker class for AST traversal and type checking
+class TypeChecker(ast.NodeVisitor):
+    def visit_BinOp(self, node):
+        self.visit(node.left)
+        self.visit(node.right)
+        left_type = self.get_type(node.left)
+        right_type = self.get_type(node.right)
+        
+        # Perform type checking for binary operations
+        if isinstance(node.op, (ast.Add, ast.Sub, ast.Mult, ast.Div)):
+            if not ((isinstance(left_type, int) and isinstance(right_type, (int, float))) or
+                    (isinstance(left_type, float) and isinstance(right_type, (int, float))) or
+                    (isinstance(left_type, (int, float)) and isinstance(right_type, int))):
+                print(f"Type error: operands {left_type} and {right_type} must be numeric for {node.op}")
 
-int main() {
-    // Simple program
-    int a = 10;
-    printf("Hello, world!\\n");
-    return 0;
-}
+    def visit_Name(self, node):
+        # Simulate type lookup for names (variables)
+        if node.id == 'int':
+            return int  # Assume 'int' is an integer type
+        elif node.id == 'float':
+            return float  # Assume 'float' is a float type
+        else:
+            return None  # Unknown variable type
+
+    def get_type(self, node):
+        return self.visit(node)
+
+# Example usage
+def main():
+    input_code = """
+a = 5;
+b = 2;
+c = a + b;
 """
 
-lexer.input(input_code)
+    # Test the lexer
+    lexer.input(input_code)
+    for token in lexer:
+        print(token)
 
-for token in lexer:
-    print(token)
+    print("\nPerforming AST traversal and type checking:\n")
 
-#lexer and parser
+    try:
+        tree = ast.parse(input_code)
+        TypeChecker().visit(tree)
+    except SyntaxError as e:
+        print(f"SyntaxError in code: {e}")
 
+if __name__ == "__main__":
+    main()
